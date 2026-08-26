@@ -3,39 +3,39 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>The Blue Pearl Retreat — Welcome</title>
+<title>The Blue Pearl Retreat — Submerged Luxury</title>
 <!--
   Kiosk deployment note (Raspberry Pi):
   chromium-browser --kiosk --incognito --noerrdialogs --disable-infobars \
     --disable-session-crashed-bubble --autoplay-policy=no-user-gesture-required \
-    file:///path/to/blue-pearl-retreat.html
-  Needs an internet connection for live weather + the QR codes; everything else runs offline.
+    file:///path/to/blue-pearl-luxury-kiosk.html
+  Needs an internet connection for live weather/beach data + the QR codes; everything else runs offline.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500;1,9..144,600&family=Public+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --quartz:#EDEAE1;
-    --ink:#0E211C;
-    --lagoon:#146B5E;
-    --lagoon-deep:#0B4A41;
-    --deep-water:#0A2E33;
-    --gold:#E7B463;
-    --sand:#F1E4C3;
-    --sand-deep:#DFCA98;
-    --wave-back:#0D5A52;
-    --wave-mid:#12796E;
-    --wave-front:#1B9483;
-    --wave-tint-top:#8FDCCE;
-    --ease:cubic-bezier(.22,.61,.36,1);
+    --quartz:#F4EFE6;
+    --ink:#0B1524;
+    --lagoon:#2A5D68;
+    --lagoon-deep:#1C4A52;
+    --deep-water:#0B1524;
+    --gold:#C9B896;
+    --sand:#EFE6D3;
+    --sand-deep:#D8C6A0;
+    --wave-back:#0E2E3C;
+    --wave-mid:#153E4E;
+    --wave-front:#1C4A52;
+    --wave-tint-top:#9CB8B4;
+    --ease:cubic-bezier(.16,1,.3,1);
   }
 
   *{ box-sizing:border-box; user-select:none; -webkit-user-select:none; }
   html, body{ height:100%; margin:0; overflow:hidden; background:var(--deep-water); cursor:none; }
   body{
     color:var(--ink);
-    font-family:'Public Sans', sans-serif;
+    font-family:'Inter', sans-serif;
     -webkit-font-smoothing:antialiased;
   }
   .mono{ font-family:'Space Mono', monospace; font-feature-settings:"tnum"; font-variant-numeric:tabular-nums; }
@@ -43,13 +43,24 @@
   /* ================= Ocean scene ================= */
   #oceanScene{ position:fixed; inset:0; z-index:0; overflow:hidden; background:var(--deep-water); }
 
-  #illustratedOcean{ position:absolute; inset:0; z-index:1; }
+  .ocean-video{
+    position:absolute; inset:0; z-index:0;
+    width:100%; height:100%; object-fit:cover; object-position:center center;
+  }
+
+  /* Illustrated scene is the always-available fallback: shown by default,
+     fades out once the real video has actually started playing. */
+  #illustratedOcean{
+    position:absolute; inset:0; z-index:1;
+    transition:opacity 1.6s ease;
+  }
+  #oceanScene.video-ready #illustratedOcean{ opacity:0; }
 
   .scene-grade{
     position:absolute; inset:0; z-index:2; pointer-events:none;
     background:
-      linear-gradient(180deg, rgba(6,20,18,.32) 0%, rgba(6,20,18,.05) 38%, rgba(6,20,18,.4) 100%),
-      linear-gradient(0deg, rgba(11,74,65,.22), rgba(11,74,65,0) 55%);
+      linear-gradient(180deg, rgba(11,21,36,.32) 0%, rgba(11,21,36,.05) 38%, rgba(11,21,36,.4) 100%),
+      linear-gradient(0deg, rgba(28,74,82,.22), rgba(28,74,82,0) 55%);
     mix-blend-mode:multiply;
   }
 
@@ -249,8 +260,8 @@
   .lower-third{
     position:absolute; left:0; right:0; bottom:0;
     height:clamp(198px,26vh,280px);
-    background:linear-gradient(0deg, rgba(6,20,18,.66) 0%, rgba(6,20,18,.46) 65%, rgba(6,20,18,0) 100%);
-    border-top:1px solid rgba(231,180,99,.35);
+    background:linear-gradient(0deg, rgba(11,21,36,.66) 0%, rgba(11,21,36,.46) 65%, rgba(11,21,36,0) 100%);
+    border-top:1px solid rgba(201,184,150,.35);
     display:flex; flex-direction:column; justify-content:center;
     gap:clamp(10px,1.5vh,16px);
     padding:clamp(12px,1.8vh,20px) clamp(4px,1vw,10px);
@@ -276,11 +287,11 @@
     font-weight:700; letter-spacing:.04em;
   }
   .pill.calm{ background:rgba(60,180,110,.24); color:#9BE8BC; }
-  .pill.moderate{ background:rgba(231,180,99,.26); color:#F3CE8C; }
+  .pill.moderate{ background:rgba(201,184,150,.26); color:#E3D3B0; }
   .pill.rough{ background:rgba(224,120,70,.26); color:#F5AC80; }
   .pill.high{ background:rgba(214,70,70,.28); color:#F5A3A3; }
   .br-note{
-    font-family:'Public Sans',sans-serif; font-style:italic; font-size:clamp(9.5px,1vh,11.5px);
+    font-family:'Inter',sans-serif; font-style:italic; font-size:clamp(9.5px,1vh,11.5px);
     color:rgba(255,255,255,.42); flex:none; max-width:22ch; text-align:right;
   }
 
@@ -323,6 +334,10 @@
 <body>
 
 <div id="oceanScene" aria-hidden="true">
+  <video class="ocean-video" id="oceanVideo" autoplay muted loop playsinline preload="auto">
+    <source src="ocean-loop.mp4" type="video/mp4">
+  </video>
+
   <div id="illustratedOcean">
     <div id="sky"></div>
     <div class="horizon-glow"></div>
@@ -384,9 +399,9 @@
     </div>
 
     <div class="headline-block">
-      <div class="eyebrow"><span class="dot"></span>Destin, Florida — the Emerald Coast</div>
+      <div class="eyebrow"><span class="dot"></span>A Private Coastal Retreat — Destin, Florida</div>
       <h1 class="hero-title" id="welcomeTitle">Welcome.</h1>
-      <p class="hero-sub">Your Gulf-front week at The Blue Pearl Retreat starts here — the water, the weather, and everything you need.</p>
+      <p class="hero-sub">Stillness, light, and water — your stay at The Blue Pearl Retreat begins now.</p>
     </div>
 
     <div class="lower-third">
@@ -433,6 +448,16 @@
 
 <script>
 (function(){
+  /* ---------------- Real video background ---------------- */
+  const oceanScene = document.getElementById('oceanScene');
+  const oceanVideo = document.getElementById('oceanVideo');
+  oceanVideo.addEventListener('playing', () => {
+    oceanScene.classList.add('video-ready'); // fades the illustrated fallback out
+  });
+  oceanVideo.addEventListener('error', () => {
+    oceanScene.classList.remove('video-ready'); // stay on the illustration
+  });
+
   /* ---------------- Guest welcome ----------------
      Set the guest's name here before each stay, e.g. const GUEST_NAME = "Sarah";
      Leave it as an empty string and the headline just reads "Welcome." */
@@ -455,12 +480,12 @@
 
   // named phase palettes: [topSky, midSky, nearHorizon, orbColor, orbGlow]
   const PHASES = {
-    night:  ['#050C14','#0A2E33','#123C3D', '#DCE6F2', 'rgba(220,230,242,.55)'],
-    dawn:   ['#16283C','#3C5468','#8E7C6E', '#F3D9A6', 'rgba(243,217,166,.6)'],
-    sunrise:['#2E5064','#6C8792','#E7B463', '#F7C77E', 'rgba(247,199,126,.7)'],
-    day:    ['#3E7C99','#3E93A0','#79C2B8', '#FCEBB3', 'rgba(252,235,179,.55)'],
-    golden: ['#3A6E86','#5C9490','#E7B463', '#F5B95E', 'rgba(245,185,94,.7)'],
-    dusk:   ['#1C3348','#2E4F58','#8A5A52', '#F09A6B', 'rgba(240,154,107,.6)'],
+    night:  ['#050810','#0B1524','#12232E', '#EDE6D6', 'rgba(237,230,214,.5)'],
+    dawn:   ['#0E1B2A','#1C3440','#3E5A5E', '#E7D9B8', 'rgba(231,217,184,.55)'],
+    sunrise:['#1C3440','#355763','#C9B896', '#EAC98E', 'rgba(234,201,142,.65)'],
+    day:    ['#2E4E5C','#4A7480','#8FB3AE', '#F4EFE6', 'rgba(244,239,230,.5)'],
+    golden: ['#2A4C58','#5C7F76','#C9B896', '#E8C079', 'rgba(232,192,121,.65)'],
+    dusk:   ['#12232E','#1C3440','#5C4A46', '#D8A98A', 'rgba(216,169,138,.55)'],
   };
 
   function hexToRgb(h){ const n=parseInt(h.slice(1),16); return [n>>16&255, n>>8&255, n&255]; }

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blue Pearl Kiosk Control Panel</title>
+<style>
+  body { font-family: -apple-system, sans-serif; max-width: 420px; margin: 60px auto; padding: 20px; }
+  h1 { font-size: 20px; margin-bottom: 24px; }
+  label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; }
+  input { width: 100%; padding: 12px; font-size: 16px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+  button { width: 100%; padding: 14px; font-size: 16px; background: #0969da; color: white; border: none; border-radius: 6px; cursor: pointer; }
+  button:disabled { background: #ccc; }
+  #status { margin-top: 16px; font-size: 14px; }
+  .success { color: #1a7f37; }
+  .error { color: #cf222e; }
+  #tokenSection { border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px; }
+  #tokenSection summary { cursor: pointer; font-size: 13px; color: #666; }
+</style>
+</head>
+<body>
+
+<h1>Blue Pearl Kiosk — Guest Name</h1>
+
+<label for="guestName">Guest Name</label>
+<input type="text" id="guestName" placeholder="e.g. Sarah">
+
+<button id="updateBtn">Update Guest Name</button>
+
+<div id="status"></div>
+
+<details id="tokenSection">
+  <summary>GitHub Access Token (one-time setup)</summary>
+  <br>
+  <label for="tokenInput">Token</label>
+  <input type="password" id="tokenInput" placeholder="github_pat_...">
+  <button id="saveTokenBtn">Save Token</button>
+</details>
+
+<script>
+const REPO = 'bluepearlretreat/blue-pearl-kiosk';
+const FILE_PATH = 'guest-config.json';
+
+const guestNameInput = document.getElementById('guestName');
+const updateBtn = document.getElementById('updateBtn');
+const statusEl = document.getElementById('status');
+const tokenInput = document.getElementById('tokenInput');
+const saveTokenBtn = document.getElementById('saveTokenBtn');
+
+function getToken() {
+  return localStorage.getItem('gh_token');
+}
+
+saveTokenBtn.addEventListener('click', () => {
+  const token = tokenInput.value.trim();
+  if (token) {
+    localStorage.setItem('gh_token', token);
+    tokenInput.value = '';
+    statusEl.textContent = 'Token saved.';
+    statusEl.className = 'success';
+  }
+});
+
+updateBtn.addEventListener('click', async () => {
+  const token = getToken();
+  const name = guestNameInput.value.trim();
+
+  if (!token) {
+    statusEl.textContent = 'Please set your GitHub token first (below).';
+    statusEl.className = 'error';
+    return;
+  }
+
+  updateBtn.disabled = true;
+  statusEl.textContent = 'Updating...';
+  statusEl.className = '';
+
+  try {
+    // Get current file to obtain its SHA (required by GitHub API to update a file)
+    const getRes = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const getData = await getRes.json();
+    const sha = getData.sha;
+
+    const newContent = JSON.stringify({ guestName: name }, null, 2);
+    const encodedContent = btoa(newContent);
+
+    const putRes = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: `Update guest name to ${name || '(cleared)'}`,
+        content: encodedContent,
+        sha: sha
+      })
+    });
+
+    if (putRes.ok) {
+      statusEl.textContent = 'Guest name updated! It may take a minute to appear on the kiosk.';
+      statusEl.className = 'success';
+    } else {
+      const err = await putRes.json();
+      statusEl.textContent = 'Error: ' + (err.message || 'Update failed.');
+      statusEl.className = 'error';
+    }
+  } catch (e) {
+    statusEl.textContent = 'Error: ' + e.message;
+    statusEl.className = 'error';
+  }
+
+  updateBtn.disabled = false;
+});
+</script>
+
+</body>
+</html>

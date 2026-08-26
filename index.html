@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>The Blue Pearl Retreat — Welcome</title>
+<!--
+  Kiosk deployment note (Raspberry Pi):
+  chromium-browser --kiosk --incognito --noerrdialogs --disable-infobars \
+    --disable-session-crashed-bubble --autoplay-policy=no-user-gesture-required \
+    file:///path/to/blue-pearl-retreat.html
+  Needs an internet connection for live weather + the QR codes; everything else runs offline.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500;1,9..144,600&family=Public+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --quartz:#EDEAE1;
+    --ink:#0E211C;
+    --lagoon:#146B5E;
+    --lagoon-deep:#0B4A41;
+    --deep-water:#0A2E33;
+    --gold:#E7B463;
+    --sand:#F1E4C3;
+    --sand-deep:#DFCA98;
+    --wave-back:#0D5A52;
+    --wave-mid:#12796E;
+    --wave-front:#1B9483;
+    --wave-tint-top:#8FDCCE;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+
+  *{ box-sizing:border-box; user-select:none; -webkit-user-select:none; }
+  html, body{ height:100%; margin:0; overflow:hidden; background:var(--deep-water); cursor:none; }
+  body{
+    color:var(--ink);
+    font-family:'Public Sans', sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{ font-family:'Space Mono', monospace; font-feature-settings:"tnum"; font-variant-numeric:tabular-nums; }
+
+  /* ================= Ocean scene ================= */
+  #oceanScene{ position:fixed; inset:0; z-index:0; overflow:hidden; background:var(--deep-water); }
+
+  #illustratedOcean{ position:absolute; inset:0; z-index:1; }
+
+  .scene-grade{
+    position:absolute; inset:0; z-index:2; pointer-events:none;
+    background:
+      linear-gradient(180deg, rgba(6,20,18,.32) 0%, rgba(6,20,18,.05) 38%, rgba(6,20,18,.4) 100%),
+      linear-gradient(0deg, rgba(11,74,65,.22), rgba(11,74,65,0) 55%);
+    mix-blend-mode:multiply;
+  }
+
+  #sky{ position:absolute; inset:0; z-index:0; transition:background 4s ease; }
+
+  .cloud{
+    position:absolute; z-index:1; border-radius:50%;
+    background:
+      radial-gradient(closest-side at 35% 28%, rgba(255,255,255,.6), rgba(255,255,255,0) 68%),
+      radial-gradient(closest-side at 66% 72%, rgba(255,255,255,.16), rgba(255,255,255,0) 75%);
+    filter:blur(16px); pointer-events:none;
+  }
+  .cloud1{ width:40vw; height:15vh; top:9%;  left:-20vw; animation:cloudDrift 170s linear infinite; }
+  .cloud2{ width:26vw; height:10vh; top:19%; left:-14vw; animation:cloudDrift 230s linear infinite; animation-delay:-90s; opacity:.7; }
+  @keyframes cloudDrift{ from{ transform:translateX(0); } to{ transform:translateX(150vw); } }
+
+  #rays{
+    position:absolute; z-index:1;
+    width:clamp(220px,44vh,560px); height:clamp(220px,44vh,560px);
+    transform:translate(-50%,-50%) rotate(0deg);
+    background:conic-gradient(from 0deg,
+      transparent 0deg, rgba(255,255,255,.16) 5deg, transparent 12deg,
+      transparent 42deg, rgba(255,255,255,.12) 48deg, transparent 56deg,
+      transparent 92deg, rgba(255,255,255,.15) 98deg, transparent 106deg,
+      transparent 142deg, rgba(255,255,255,.1) 148deg, transparent 156deg,
+      transparent 192deg, rgba(255,255,255,.16) 198deg, transparent 206deg,
+      transparent 242deg, rgba(255,255,255,.12) 248deg, transparent 256deg,
+      transparent 292deg, rgba(255,255,255,.14) 298deg, transparent 306deg,
+      transparent 342deg, rgba(255,255,255,.1) 348deg, transparent 356deg);
+    mix-blend-mode:screen; pointer-events:none; filter:blur(2px);
+    opacity:var(--rays-opacity, .45);
+    animation:raysSpin 100s linear infinite;
+    transition:left 3.5s linear, top 3.5s linear, opacity 4s ease;
+  }
+  @keyframes raysSpin{ from{ transform:translate(-50%,-50%) rotate(0deg); } to{ transform:translate(-50%,-50%) rotate(360deg); } }
+
+  #orbHalo{
+    position:absolute; z-index:1; border-radius:50%;
+    width:clamp(80px,10vh,150px); height:clamp(80px,10vh,150px);
+    transform:translate(-50%,-50%);
+    background:radial-gradient(circle, var(--halo-color, rgba(255,220,150,.4)) 0%, transparent 72%);
+    mix-blend-mode:screen; filter:blur(5px); pointer-events:none;
+    transition:left 3.5s linear, top 3.5s linear, background 4s ease;
+  }
+
+  #orb{
+    position:absolute; z-index:2; border-radius:50%;
+    width:clamp(30px,3.6vh,52px); height:clamp(30px,3.6vh,52px);
+    box-shadow:inset -4px -3px 0 rgba(0,0,0,.08), inset 3px 2px 8px rgba(255,255,255,.5);
+    transform:translate(-50%,-50%);
+    transition:left 3.5s linear, top 3.5s linear, background 4s ease, box-shadow 4s ease;
+  }
+  #glitter{
+    position:absolute; top:0; z-index:2; width:clamp(70px,9vw,150px); height:56%;
+    transform:translateX(-50%);
+    background:linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.12) 55%, rgba(255,255,255,0) 100%);
+    mix-blend-mode:overlay; filter:blur(7px); pointer-events:none;
+    transition:left 3.5s linear, top 3.5s linear;
+    animation:glitterFlicker 2.4s ease-in-out infinite;
+  }
+  @keyframes glitterFlicker{ 0%,100%{ opacity:.35; } 50%{ opacity:.7; } }
+
+  .horizon-glow{
+    position:absolute; left:0; right:0; bottom:22vh; height:5vh; z-index:1;
+    filter:blur(14px); pointer-events:none;
+    opacity:var(--horizon-glow-opacity, .3);
+    background:linear-gradient(180deg, transparent, var(--wave-tint-top), transparent);
+    transition:opacity 4s ease;
+  }
+
+  .caustics{
+    position:absolute; left:0; bottom:2vh; width:200%; height:20vh; z-index:2; pointer-events:none;
+    mix-blend-mode:screen; opacity:.32;
+    background-repeat:repeat;
+    background-image:
+      radial-gradient(circle, rgba(255,255,255,.9) 0 1.4px, transparent 2px),
+      radial-gradient(circle, rgba(255,255,255,.6) 0 1px, transparent 1.6px);
+    background-size:90px 70px, 130px 100px;
+    animation:causticsDrift 24s linear infinite, causticsTwinkle 3.4s ease-in-out infinite;
+  }
+  @keyframes causticsDrift{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+  @keyframes causticsTwinkle{ 0%,100%{ opacity:.2; } 50%{ opacity:.42; } }
+
+  .ripple-texture{
+    position:absolute; left:0; right:0; bottom:0; height:26vh; z-index:3; pointer-events:none;
+    opacity:.07; mix-blend-mode:soft-light;
+    background-size:200px 60px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='60'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='turbulence' baseFrequency='0.02 0.15' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23r)'/%3E%3C/svg%3E");
+  }
+
+  .wave-bob{ position:absolute; left:0; width:200%; height:24vh; min-height:130px; }
+  .wave-layer{ position:absolute; inset:0; }
+  .wave-layer svg{ width:100%; height:100%; display:block; }
+  .bob1{ bottom:5vh; z-index:2; opacity:.5;  animation:bobY 7.5s ease-in-out infinite; }
+  .bob2{ bottom:1.5vh; z-index:2; opacity:.72; animation:bobY 6s ease-in-out infinite reverse; }
+  .bob3{ bottom:-1.5vh; z-index:3; opacity:.96; animation:bobY 5s ease-in-out infinite; }
+  .drift1{ animation:waveDrift 40s linear infinite; }
+  .drift2{ animation:waveDrift 26s linear infinite reverse; }
+  .drift3{ animation:waveDrift 17s linear infinite; }
+  @keyframes waveDrift{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+  @keyframes bobY{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-3.5%); } }
+
+  .shore{
+    position:absolute; left:0; right:0; bottom:0; z-index:3;
+    height:clamp(60px,10vh,140px);
+    background:
+      radial-gradient(120% 60% at 18% 100%, rgba(255,255,255,.10), transparent 60%),
+      radial-gradient(90% 50% at 78% 100%, rgba(0,0,0,.06), transparent 60%),
+      linear-gradient(180deg, var(--sand) 0%, var(--sand-deep) 100%);
+  }
+  .shore::before{
+    content:''; position:absolute; inset:0; top:0; height:55%;
+    background:linear-gradient(180deg, var(--wave-tint-top), transparent);
+    opacity:.24; mix-blend-mode:soft-light; pointer-events:none;
+    transition:background 4s ease;
+  }
+  .wash{
+    position:absolute; left:0; right:0; top:-2px; height:42%; z-index:4;
+    transform-origin:top center; pointer-events:none;
+    background:linear-gradient(180deg, rgba(255,255,255,.85) 0%, rgba(210,235,228,.32) 45%, rgba(210,235,228,0) 100%);
+    filter:blur(2.5px);
+    animation:washSurge 6.4s cubic-bezier(.32,.72,.15,1) infinite;
+  }
+  @keyframes washSurge{
+    0%{   transform:scaleY(.12) translateY(4px); opacity:.12; }
+    22%{  transform:scaleY(1) translateY(-10px);  opacity:.8; }
+    48%{  transform:scaleY(.5) translateY(-2px);  opacity:.5; }
+    100%{ transform:scaleY(.12) translateY(4px);  opacity:.12; }
+  }
+  .foamline{
+    position:absolute; left:0; right:0; top:-5px; height:13px; z-index:4;
+    background-repeat:repeat-x; background-size:150px 100%;
+    background-image:
+      radial-gradient(circle at 10px 7px, rgba(255,255,255,.92) 0 3px, transparent 4px),
+      radial-gradient(circle at 34px 5px, rgba(255,255,255,.7)  0 2.5px, transparent 3.5px),
+      radial-gradient(circle at 58px 8px, rgba(255,255,255,.85) 0 3px, transparent 4px),
+      radial-gradient(circle at 88px 4px, rgba(255,255,255,.65) 0 2px, transparent 3px),
+      radial-gradient(circle at 112px 7px, rgba(255,255,255,.9) 0 3px, transparent 4px),
+      radial-gradient(circle at 134px 5px, rgba(255,255,255,.6) 0 2px, transparent 3px);
+    filter:blur(.6px);
+    animation:foamDrift 8s linear infinite, foamPulse 4.2s ease-in-out infinite;
+  }
+  @keyframes foamDrift{ from{ background-position:0 0; } to{ background-position:-150px 0; } }
+  @keyframes foamPulse{ 0%,100%{ opacity:.6; transform:scaleY(1); } 50%{ opacity:1; transform:scaleY(1.7); } }
+
+  .grain{
+    position:absolute; inset:0; z-index:5; pointer-events:none;
+    opacity:.04; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .cloud, .wave-bob, .bob1, .bob2, .bob3, .foamline, .wash, .caustics, #glitter{ animation:none; }
+  }
+
+  /* ================= Foreground / TV composition ================= */
+  .screen{ position:fixed; inset:0; z-index:1; }
+  .safe-area{
+    position:absolute; inset:clamp(20px,4vh,56px) clamp(24px,4vw,72px);
+    color:#fff;
+  }
+
+  .brand-corner{ position:absolute; top:0; left:0; }
+  .brand-mark{
+    font-family:'Fraunces',serif; font-weight:500; font-style:italic;
+    font-size:clamp(18px,2.5vh,30px); line-height:1.1; letter-spacing:.01em;
+  }
+  .brand-mark span{ display:block; font-family:'Space Mono',monospace; font-style:normal; font-weight:400;
+    font-size:clamp(9px,1.05vh,12px); letter-spacing:.24em; text-transform:uppercase; color:rgba(255,255,255,.65); margin-top:4px; }
+  .brand-rule{ width:42px; height:1px; background:var(--gold); margin-top:12px; opacity:.8; }
+
+  .time-corner{ position:absolute; top:0; right:0; text-align:right; }
+  .time-now{ font-family:'Space Mono',monospace; font-weight:700; font-size:clamp(24px,3.4vh,42px); line-height:1; }
+  .time-sub{ font-family:'Space Mono',monospace; font-size:clamp(10px,1.15vh,13px); letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.65); margin-top:6px; }
+
+  .headline-block{
+    position:absolute; left:0; top:36%; transform:translateY(-40%);
+    max-width:min(52vw, 820px);
+  }
+  .eyebrow{
+    display:flex; align-items:center; gap:10px;
+    font-family:'Space Mono',monospace; font-size:clamp(10.5px,1.25vh,13.5px);
+    letter-spacing:.18em; text-transform:uppercase; color:rgba(255,255,255,.85);
+    margin-bottom:clamp(10px,1.6vh,18px);
+  }
+  .eyebrow .dot{ width:6px; height:6px; border-radius:50%; background:var(--gold); box-shadow:0 0 8px var(--gold); }
+  h1.hero-title{
+    font-family:'Fraunces',serif; font-weight:500; font-style:italic;
+    font-size:clamp(40px,7.4vh,104px); line-height:0.98; letter-spacing:-.01em;
+    margin:0 0 clamp(10px,1.6vh,18px);
+  }
+  .hero-sub{
+    font-size:clamp(14px,1.7vh,19px); line-height:1.5; max-width:44ch;
+    color:rgba(255,255,255,.86); margin:0;
+  }
+
+  .lower-third{
+    position:absolute; left:0; right:0; bottom:0;
+    height:clamp(198px,26vh,280px);
+    background:linear-gradient(0deg, rgba(6,20,18,.66) 0%, rgba(6,20,18,.46) 65%, rgba(6,20,18,0) 100%);
+    border-top:1px solid rgba(231,180,99,.35);
+    display:flex; flex-direction:column; justify-content:center;
+    gap:clamp(10px,1.5vh,16px);
+    padding:clamp(12px,1.8vh,20px) clamp(4px,1vw,10px);
+  }
+
+  .beach-report{
+    display:flex; align-items:center; gap:clamp(16px,2.2vw,36px);
+    padding-bottom:clamp(9px,1.4vh,16px);
+    border-bottom:1px solid rgba(255,255,255,.14);
+  }
+  .br-label{
+    font-family:'Space Mono',monospace; font-size:clamp(10px,1.05vh,12px);
+    letter-spacing:.14em; text-transform:uppercase; color:var(--gold); flex:none;
+  }
+  .br-stats{ display:flex; gap:clamp(18px,2.4vw,40px); flex:1; }
+  .br-stat{ display:flex; flex-direction:column; gap:3px; }
+  .br-stat .k{ font-family:'Space Mono',monospace; font-size:clamp(9px,.95vh,11px); letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,.55); }
+  .br-stat .v{ font-family:'Space Mono',monospace; font-size:clamp(14px,1.6vh,18px); font-weight:700; color:#fff; }
+  .pill{
+    display:inline-flex; align-items:center; width:fit-content;
+    padding:3px 11px; border-radius:999px;
+    font-family:'Space Mono',monospace; font-size:clamp(10px,1.05vh,12.5px);
+    font-weight:700; letter-spacing:.04em;
+  }
+  .pill.calm{ background:rgba(60,180,110,.24); color:#9BE8BC; }
+  .pill.moderate{ background:rgba(231,180,99,.26); color:#F3CE8C; }
+  .pill.rough{ background:rgba(224,120,70,.26); color:#F5AC80; }
+  .pill.high{ background:rgba(214,70,70,.28); color:#F5A3A3; }
+  .br-note{
+    font-family:'Public Sans',sans-serif; font-style:italic; font-size:clamp(9.5px,1vh,11.5px);
+    color:rgba(255,255,255,.42); flex:none; max-width:22ch; text-align:right;
+  }
+
+  .lt-main{ display:flex; align-items:center; justify-content:space-between; gap:clamp(20px,3vw,52px); }
+  .lt-weather{ display:flex; align-items:center; gap:clamp(20px,2.6vw,44px); min-width:0; }
+  .lt-now{ display:flex; align-items:center; gap:clamp(10px,1.4vw,18px); flex:none; }
+  .lt-icon{ width:clamp(38px,4.6vh,58px); height:clamp(38px,4.6vh,58px); flex:none; }
+  .lt-temp{ font-weight:700; font-size:clamp(28px,3.8vh,46px); line-height:1; }
+  .lt-cond{ font-size:clamp(12px,1.3vh,15px); color:rgba(255,255,255,.85); margin-top:3px; }
+  .lt-sub{ font-size:clamp(10.5px,1.1vh,12.5px); color:rgba(255,255,255,.55); margin-top:2px; }
+
+  .lt-divider{ width:1px; align-self:center; height:56%; background:rgba(255,255,255,.22); flex:none; }
+
+  .lt-forecast{ display:flex; gap:clamp(10px,1.3vw,20px); }
+  .fday{
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    min-width:clamp(44px,4.6vw,64px);
+  }
+  .fday .d{ font-family:'Space Mono',monospace; font-size:clamp(9.5px,1vh,11.5px); letter-spacing:.06em; text-transform:uppercase; color:rgba(255,255,255,.6); }
+  .fday svg{ width:clamp(18px,2.4vh,26px); height:clamp(18px,2.4vh,26px); }
+  .fday .hi{ font-family:'Space Mono',monospace; font-size:clamp(12.5px,1.4vh,16px); }
+  .fday .lo{ font-family:'Space Mono',monospace; font-size:clamp(10px,1.1vh,12.5px); color:rgba(255,255,255,.5); }
+
+  .lt-qr{ display:flex; gap:clamp(14px,1.8vw,28px); flex:none; }
+  .qr-item{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .qr-item img{
+    width:clamp(72px,7.6vh,104px); height:clamp(72px,7.6vh,104px);
+    background:#fff; border-radius:8px; padding:5px; display:block;
+  }
+  .qr-item span{
+    font-family:'Space Mono',monospace; font-size:clamp(9px,.95vh,11px);
+    letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,.8); text-align:center;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:.001ms !important; transition-duration:.001ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="oceanScene" aria-hidden="true">
+  <div id="illustratedOcean">
+    <div id="sky"></div>
+    <div class="horizon-glow"></div>
+    <div class="cloud cloud1"></div>
+    <div class="cloud cloud2"></div>
+    <div id="rays"></div>
+    <div id="orbHalo"></div>
+    <div id="orb"></div>
+    <div id="glitter"></div>
+
+    <div class="wave-bob bob1"><div class="wave-layer drift1"><svg viewBox="0 0 2880 220" preserveAspectRatio="none">
+      <defs><linearGradient id="wg1" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" style="stop-color:var(--wave-tint-top)"/><stop offset="100%" stop-color="var(--wave-back)"/>
+      </linearGradient></defs>
+      <path id="wp1" fill="url(#wg1)" d="M0,90 C 120,50 240,130 360,90 C 480,50 600,130 720,90 C 840,50 960,130 1080,90 C 1200,50 1320,130 1440,90 L1440,220 L0,220 Z
+        M1440,90 C 1560,50 1680,130 1800,90 C 1920,50 2040,130 2160,90 C 2280,50 2400,130 2520,90 C 2640,50 2760,130 2880,90 L2880,220 L1440,220 Z"/>
+      <use href="#wp1" fill="none" stroke="#fff" stroke-width="2.5" style="mix-blend-mode:screen;opacity:.28"/>
+    </svg></div></div>
+
+    <div class="wave-bob bob2"><div class="wave-layer drift2"><svg viewBox="0 0 2880 220" preserveAspectRatio="none">
+      <defs><linearGradient id="wg2" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" style="stop-color:var(--wave-tint-top)"/><stop offset="100%" stop-color="var(--wave-mid)"/>
+      </linearGradient></defs>
+      <path id="wp2" fill="url(#wg2)" d="M0,100 C 100,140 260,50 400,95 C 540,140 700,55 860,100 C 1000,140 1160,55 1300,95 C 1400,120 1420,95 1440,100 L1440,220 L0,220 Z
+        M1440,100 C 1540,140 1700,50 1840,95 C 1980,140 2140,55 2300,100 C 2440,140 2600,55 2740,95 C 2840,120 2860,95 2880,100 L2880,220 L1440,220 Z"/>
+      <use href="#wp2" fill="none" stroke="#fff" stroke-width="2.5" style="mix-blend-mode:screen;opacity:.32"/>
+    </svg></div></div>
+
+    <div class="wave-bob bob3"><div class="wave-layer drift3"><svg viewBox="0 0 2880 220" preserveAspectRatio="none">
+      <defs><linearGradient id="wg3" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" style="stop-color:var(--wave-tint-top)"/><stop offset="100%" stop-color="var(--wave-front)"/>
+      </linearGradient></defs>
+      <path id="wp3" fill="url(#wg3)" d="M0,110 C 90,80 220,140 340,105 C 460,72 600,145 740,108 C 880,75 1020,142 1160,106 C 1280,78 1380,120 1440,108 L1440,220 L0,220 Z
+        M1440,110 C 1530,80 1660,140 1780,105 C 1900,72 2040,145 2180,108 C 2320,75 2460,142 2600,106 C 2720,78 2820,120 2880,108 L2880,220 L1440,220 Z"/>
+      <use href="#wp3" fill="none" stroke="#fff" stroke-width="3" style="mix-blend-mode:screen;opacity:.4"/>
+    </svg></div></div>
+
+    <div class="caustics"></div>
+    <div class="ripple-texture"></div>
+
+    <div class="shore"><div class="wash"></div><div class="foamline"></div></div>
+  </div>
+
+  <div class="scene-grade"></div>
+  <div class="grain"></div>
+</div>
+
+<main class="screen">
+  <div class="safe-area">
+
+    <div class="brand-corner">
+      <div class="brand-mark">The Blue Pearl<span>Retreat &nbsp;·&nbsp; Destin, FL</span></div>
+      <div class="brand-rule"></div>
+    </div>
+
+    <div class="time-corner">
+      <div class="time-now mono" id="localTime">--:--</div>
+      <div class="time-sub"><span id="dateNow">—</span> &nbsp;·&nbsp; <span id="skyPhase">—</span></div>
+    </div>
+
+    <div class="headline-block">
+      <div class="eyebrow"><span class="dot"></span>Destin, Florida — the Emerald Coast</div>
+      <h1 class="hero-title" id="welcomeTitle">Welcome.</h1>
+      <p class="hero-sub">Your Gulf-front week at The Blue Pearl Retreat starts here — the water, the weather, and everything you need.</p>
+    </div>
+
+    <div class="lower-third">
+      <div class="beach-report">
+        <span class="br-label">Beach Report — Destin</span>
+        <div class="br-stats">
+          <div class="br-stat"><span class="k">Water</span><span class="v mono" id="waterTemp">--°</span></div>
+          <div class="br-stat"><span class="k">Waves</span><span class="v mono" id="waveHeight">-- ft</span></div>
+          <div class="br-stat"><span class="k">UV Index</span><span class="v mono" id="uvIndex">--</span></div>
+          <div class="br-stat"><span class="k">Surf</span><span class="pill" id="surfPill">—</span></div>
+        </div>
+        <span class="br-note">Estimated — check posted flags for official conditions</span>
+      </div>
+
+      <div class="lt-main">
+        <div class="lt-weather">
+          <div class="lt-now">
+            <div class="lt-icon" id="nowIcon"></div>
+            <div>
+              <div class="lt-temp mono" id="nowTemp">--°</div>
+              <div class="lt-cond" id="nowLabel">Loading conditions…</div>
+              <div class="lt-sub mono" id="nowSub">Feels --° · -- mph</div>
+            </div>
+          </div>
+          <div class="lt-divider"></div>
+          <div class="lt-forecast" id="forecastRow"></div>
+        </div>
+
+        <div class="lt-qr">
+          <div class="qr-item">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=0&data=https%3A%2F%2Fexample.com%2Fblue-pearl-welcome-guide" alt="QR code linking to the welcome guide">
+            <span>Welcome Guide</span>
+          </div>
+          <div class="qr-item">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=0&data=https%3A%2F%2Fexample.com%2Fblue-pearl-house-instructions" alt="QR code linking to house instructions">
+            <span>House Rules</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+(function(){
+  /* ---------------- Guest welcome ----------------
+     Set the guest's name here before each stay, e.g. const GUEST_NAME = "Sarah";
+     Leave it as an empty string and the headline just reads "Welcome." */
+  const GUEST_NAME = "";
+
+  const welcomeTitle = document.getElementById('welcomeTitle');
+  const guestName = GUEST_NAME.trim();
+  welcomeTitle.textContent = guestName ? `Welcome, ${guestName}.` : 'Welcome.';
+
+  /* ---------------- Living Horizon ---------------- */
+  const sky = document.getElementById('sky');
+  const orb = document.getElementById('orb');
+  const orbHalo = document.getElementById('orbHalo');
+  const rays = document.getElementById('rays');
+  const glitter = document.getElementById('glitter');
+  const localTimeEl = document.getElementById('localTime');
+  const dateNowEl = document.getElementById('dateNow');
+  const skyPhaseEl = document.getElementById('skyPhase');
+  const root = document.documentElement;
+
+  // named phase palettes: [topSky, midSky, nearHorizon, orbColor, orbGlow]
+  const PHASES = {
+    night:  ['#050C14','#0A2E33','#123C3D', '#DCE6F2', 'rgba(220,230,242,.55)'],
+    dawn:   ['#16283C','#3C5468','#8E7C6E', '#F3D9A6', 'rgba(243,217,166,.6)'],
+    sunrise:['#2E5064','#6C8792','#E7B463', '#F7C77E', 'rgba(247,199,126,.7)'],
+    day:    ['#3E7C99','#3E93A0','#79C2B8', '#FCEBB3', 'rgba(252,235,179,.55)'],
+    golden: ['#3A6E86','#5C9490','#E7B463', '#F5B95E', 'rgba(245,185,94,.7)'],
+    dusk:   ['#1C3348','#2E4F58','#8A5A52', '#F09A6B', 'rgba(240,154,107,.6)'],
+  };
+
+  function hexToRgb(h){ const n=parseInt(h.slice(1),16); return [n>>16&255, n>>8&255, n&255]; }
+  function rgbToCss(a){ return `rgb(${a[0]},${a[1]},${a[2]})`; }
+  function lerp(a,b,t){ return a+(b-a)*t; }
+  function lerpColor(c1,c2,t){ const a=hexToRgb(c1), b=hexToRgb(c2); return rgbToCss([lerp(a[0],b[0],t),lerp(a[1],b[1],t),lerp(a[2],b[2],t)]); }
+
+  const schedule = [
+    [0,'night'],[5,'night'],[6,'dawn'],[7,'sunrise'],[9,'day'],
+    [15,'day'],[17,'golden'],[18.5,'dusk'],[20,'night'],[24,'night']
+  ];
+
+  function getBlend(hour){
+    for(let i=0;i<schedule.length-1;i++){
+      const [h0,k0]=schedule[i], [h1,k1]=schedule[i+1];
+      if(hour>=h0 && hour<=h1){
+        const t = h1===h0 ? 0 : (hour-h0)/(h1-h0);
+        return {k0,k1,t};
+      }
+    }
+    return {k0:'night',k1:'night',t:0};
+  }
+
+  function paintSky(hour){
+    const {k0,k1,t} = getBlend(hour);
+    const A = PHASES[k0], B = PHASES[k1];
+    const top = lerpColor(A[0],B[0],t);
+    const mid = lerpColor(A[1],B[1],t);
+    const near = lerpColor(A[2],B[2],t);
+    sky.style.background = `linear-gradient(180deg, ${top} 0%, ${mid} 46%, ${near} 100%)`;
+    root.style.setProperty('--wave-tint-top', near);
+
+    const orbColor = lerpColor(A[3],B[3],t);
+    const orbGlow = t < 0.5 ? A[4] : B[4];
+    orb.style.background = orbColor;
+
+    let progressHour = hour, spanStart, spanEnd, isDay;
+    if(hour>=6 && hour<18){ spanStart=6; spanEnd=18; isDay=true; }
+    else { isDay=false; spanStart=18; spanEnd=30; progressHour = hour<6 ? hour+24 : hour; }
+    const frac = (progressHour - spanStart) / (spanEnd - spanStart);
+    const xPct = Math.max(2, Math.min(98, frac*100));
+    const heightPct = Math.max(0.06, Math.sin(Math.PI*frac));
+    const topPct = (1-heightPct)*58 + 4;
+
+    orb.style.left = xPct + '%';
+    orb.style.top = topPct + '%';
+    orb.style.boxShadow = `0 0 ${isDay?46:34}px ${isDay?18:14}px ${orbGlow}, inset -4px -3px 0 rgba(0,0,0,.08), inset 3px 2px 8px rgba(255,255,255,.5)`;
+    orb.style.opacity = isDay ? 1 : 0.92;
+
+    const glowStrength = isDay ? lerp(0.32, 0.68, 1 - heightPct) : 0.14;
+    root.style.setProperty('--horizon-glow-opacity', glowStrength.toFixed(2));
+
+    glitter.style.left = xPct + '%';
+    glitter.style.top = topPct + '%';
+
+    orbHalo.style.left = xPct + '%';
+    orbHalo.style.top = topPct + '%';
+    orbHalo.style.setProperty('--halo-color', orbGlow);
+
+    rays.style.left = xPct + '%';
+    rays.style.top = topPct + '%';
+    root.style.setProperty('--rays-opacity', (isDay ? lerp(0.3, 0.55, 1 - heightPct) : 0.16).toFixed(2));
+
+    const label = {night:'Night',dawn:'Dawn',sunrise:'Sunrise',day:'Daylight',golden:'Golden hour',dusk:'Dusk'}[t>0.5?k1:k0];
+    skyPhaseEl.textContent = label;
+  }
+
+  function tick(){
+    const now = new Date();
+    const hour = now.getHours() + now.getMinutes()/60;
+    paintSky(hour);
+    localTimeEl.textContent = now.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
+    dateNowEl.textContent = now.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
+  }
+  tick();
+  setInterval(tick, 30000);
+
+  /* ---------------- Weather (Open-Meteo, no key) ---------------- */
+  const LAT = 30.3935, LON = -86.4958; // Destin, FL — swap for the property's exact coordinates
+  const WMO = {
+    0:{l:'Clear sky', i:'sun'}, 1:{l:'Mostly clear', i:'sun'}, 2:{l:'Partly cloudy', i:'cloud-sun'}, 3:{l:'Overcast', i:'cloud'},
+    45:{l:'Fog', i:'fog'}, 48:{l:'Fog', i:'fog'},
+    51:{l:'Light drizzle', i:'drizzle'}, 53:{l:'Drizzle', i:'drizzle'}, 55:{l:'Heavy drizzle', i:'drizzle'},
+    56:{l:'Freezing drizzle', i:'drizzle'}, 57:{l:'Freezing drizzle', i:'drizzle'},
+    61:{l:'Light rain', i:'rain'}, 63:{l:'Rain', i:'rain'}, 65:{l:'Heavy rain', i:'rain'},
+    66:{l:'Freezing rain', i:'rain'}, 67:{l:'Freezing rain', i:'rain'},
+    71:{l:'Light snow', i:'snow'}, 73:{l:'Snow', i:'snow'}, 75:{l:'Heavy snow', i:'snow'}, 77:{l:'Snow grains', i:'snow'},
+    80:{l:'Rain showers', i:'rain'}, 81:{l:'Rain showers', i:'rain'}, 82:{l:'Heavy showers', i:'rain'},
+    85:{l:'Snow showers', i:'snow'}, 86:{l:'Snow showers', i:'snow'},
+    95:{l:'Thunderstorms', i:'storm'}, 96:{l:'Thunderstorms', i:'storm'}, 99:{l:'Severe storms', i:'storm'}
+  };
+
+  const ICONS = {
+    sun: '<circle cx="12" cy="12" r="4.2"/><g stroke-linecap="round"><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></g>',
+    'cloud-sun': '<circle cx="8" cy="9" r="3.4"/><path d="M8 3.6v1.6M3.6 9H5M13 6.2l-1.1 1.1M13.6 9c2.2 0 3.9 1.7 3.9 3.9 0 .3 0 .5-.1.8H8.9A3.9 3.9 0 0 1 8 6.1c.3 0 .6 0 .9.1"/><path d="M6 17.5h12a3.1 3.1 0 0 0 .3-6.2 4.6 4.6 0 0 0-8.7-1.4A3.6 3.6 0 0 0 6 17.5Z"/>',
+    cloud: '<path d="M6 17.5h12a3.1 3.1 0 0 0 .3-6.2 4.6 4.6 0 0 0-8.7-1.4A3.6 3.6 0 0 0 6 17.5Z"/>',
+    fog: '<path d="M4 9.5h11M3 13h14M4 16.5h11" stroke-linecap="round"/><circle cx="17" cy="8" r="2.6"/>',
+    drizzle: '<path d="M6 13.5h12a3.1 3.1 0 0 0 .3-6.2 4.6 4.6 0 0 0-8.7-1.4A3.6 3.6 0 0 0 6 13.5Z"/><g stroke-linecap="round"><path d="M9 18v2M13 18v2M17 18v2"/></g>',
+    rain: '<path d="M6 12.5h12a3.1 3.1 0 0 0 .3-6.2 4.6 4.6 0 0 0-8.7-1.4A3.6 3.6 0 0 0 6 12.5Z"/><g stroke-linecap="round"><path d="M8 17l-1.6 3M13 17l-1.6 3M18 17l-1.6 3"/></g>',
+    storm: '<path d="M6 11.5h11a3 3 0 0 0 .3-6 4.5 4.5 0 0 0-8.5-1.3A3.5 3.5 0 0 0 6 11.5Z"/><path d="M12.5 13.5 10 18h3l-1.8 4" stroke-linecap="round" stroke-linejoin="round"/>',
+    snow: '<path d="M6 12.5h12a3.1 3.1 0 0 0 .3-6.2 4.6 4.6 0 0 0-8.7-1.4A3.6 3.6 0 0 0 6 12.5Z"/><g stroke-linecap="round"><path d="M9 17v4M8 18.4l2 1.2M10 18.4l-2 1.2M15 17v4M14 18.4l2 1.2M16 18.4l-2 1.2"/></g>'
+  };
+  function iconSvg(key, size){
+    return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.6">${ICONS[key]||ICONS.cloud}</svg>`;
+  }
+
+  const nowTemp = document.getElementById('nowTemp');
+  const nowLabel = document.getElementById('nowLabel');
+  const nowIcon = document.getElementById('nowIcon');
+  const nowSub = document.getElementById('nowSub');
+  const forecastRow = document.getElementById('forecastRow');
+
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
+    `&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m` +
+    `&daily=temperature_2m_max,temperature_2m_min,weather_code,uv_index_max` +
+    `&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FChicago&forecast_days=5`;
+
+  let lastWindMph = null;
+
+  function loadWeather(){
+    fetch(url).then(r=>{ if(!r.ok) throw new Error('weather unavailable'); return r.json(); }).then(data=>{
+      const c = data.current;
+      const info = WMO[c.weather_code] || {l:'—', i:'cloud'};
+      nowTemp.textContent = Math.round(c.temperature_2m) + '°';
+      nowLabel.textContent = info.l;
+      nowIcon.innerHTML = iconSvg(info.i, 46);
+      nowSub.textContent = `Feels ${Math.round(c.apparent_temperature)}° · ${Math.round(c.wind_speed_10m)} mph`;
+      lastWindMph = c.wind_speed_10m;
+
+      const d = data.daily;
+      const days = d.time.map((t,idx)=>({
+        date:new Date(t+'T12:00:00'), hi:d.temperature_2m_max[idx], lo:d.temperature_2m_min[idx], code:d.weather_code[idx]
+      }));
+      forecastRow.innerHTML = days.map((day,idx)=>{
+        const label = idx===0 ? 'Today' : day.date.toLocaleDateString('en-US',{weekday:'short'});
+        const info = WMO[day.code] || {l:'—', i:'cloud'};
+        return `<div class="fday">
+          <span class="d">${label}</span>
+          ${iconSvg(info.i, 22)}
+          <span class="hi">${Math.round(day.hi)}°</span>
+          <span class="lo">${Math.round(day.lo)}°</span>
+        </div>`;
+      }).join('');
+
+      uvIndexEl.textContent = d.uv_index_max && d.uv_index_max[0] != null ? Math.round(d.uv_index_max[0]) : '--';
+    }).catch(()=>{
+      nowLabel.textContent = 'Weather unavailable';
+      nowSub.textContent = 'Retrying shortly…';
+    });
+  }
+
+  /* ---------------- Beach report (Open-Meteo Marine, no key) ---------------- */
+  const waterTempEl = document.getElementById('waterTemp');
+  const waveHeightEl = document.getElementById('waveHeight');
+  const uvIndexEl = document.getElementById('uvIndex');
+  const surfPill = document.getElementById('surfPill');
+
+  const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${LAT}&longitude=${LON}` +
+    `&hourly=wave_height,sea_surface_temperature` +
+    `&length_unit=imperial&temperature_unit=fahrenheit&timezone=America%2FChicago&forecast_days=1`;
+
+  function surfTier(waveFt, windMph){
+    const wind = windMph == null ? 10 : windMph;
+    if(waveFt < 1.2 && wind < 15)  return {cls:'calm',     label:'Calm'};
+    if(waveFt < 2.5 && wind < 20)  return {cls:'moderate', label:'Moderate'};
+    if(waveFt < 4)                 return {cls:'rough',    label:'Rough'};
+    return {cls:'high', label:'High Surf'};
+  }
+
+  function loadBeachReport(){
+    fetch(marineUrl).then(r=>{ if(!r.ok) throw new Error('marine data unavailable'); return r.json(); }).then(data=>{
+      const h = data.hourly;
+      const idx = Math.min(new Date().getHours(), h.time.length - 1);
+      const waveFt = h.wave_height[idx];
+      const waterF = h.sea_surface_temperature[idx];
+
+      waveHeightEl.textContent = waveFt != null ? `${waveFt.toFixed(1)} ft` : '—';
+      waterTempEl.textContent = waterF != null ? `${Math.round(waterF)}°` : '—';
+
+      const tier = surfTier(waveFt ?? 1.5, lastWindMph);
+      surfPill.textContent = tier.label;
+      surfPill.className = 'pill ' + tier.cls;
+    }).catch(()=>{
+      waveHeightEl.textContent = '—';
+      waterTempEl.textContent = '—';
+      surfPill.textContent = 'Unavailable';
+      surfPill.className = 'pill';
+    });
+  }
+
+  loadWeather();
+  loadBeachReport();
+  setInterval(loadWeather, 15 * 60000);
+  setInterval(loadBeachReport, 15 * 60000);
+})();
+</script>
+</body>
+</html>

@@ -458,15 +458,19 @@
     oceanScene.classList.remove('video-ready'); // stay on the illustration
   });
 
-  /* ------------------- Guest welcome -------------------
-   Guest name is loaded from guest-config.json, updated via the control panel. */
+ /* ------------------- Guest welcome -------------------
+   Guest name auto-expires after the checkout date, updated via control panel. */
 const welcomeTitle = document.getElementById('welcomeTitle');
 
 fetch('guest-config.json?t=' + Date.now())
   .then(res => res.json())
   .then(data => {
     const guestName = (data.guestName || '').trim();
-    welcomeTitle.textContent = guestName ? `Welcome, ${guestName}.` : 'Welcome.';
+    const checkoutDate = data.checkoutDate ? new Date(data.checkoutDate + 'T23:59:59') : null;
+    const now = new Date();
+    const isExpired = checkoutDate && now > checkoutDate;
+
+    welcomeTitle.textContent = (guestName && !isExpired) ? `Welcome, ${guestName}.` : 'Welcome.';
   })
   .catch(() => {
     welcomeTitle.textContent = 'Welcome.';

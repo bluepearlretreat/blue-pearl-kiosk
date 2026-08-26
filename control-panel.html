@@ -22,6 +22,8 @@
 
 <h1>Blue Pearl Kiosk — Guest Name</h1>
 
+<label for="checkoutDate">Checkout Date</label>
+<input type="date" id="checkoutDate">  
 <label for="guestName">Guest Name</label>
 <input type="text" id="guestName" placeholder="e.g. Sarah">
 
@@ -42,6 +44,7 @@ const REPO = 'bluepearlretreat/blue-pearl-kiosk';
 const FILE_PATH = 'guest-config.json';
 
 const guestNameInput = document.getElementById('guestName');
+const checkoutDateInput = document.getElementById('checkoutDate');
 const updateBtn = document.getElementById('updateBtn');
 const statusEl = document.getElementById('status');
 const tokenInput = document.getElementById('tokenInput');
@@ -64,6 +67,7 @@ saveTokenBtn.addEventListener('click', () => {
 updateBtn.addEventListener('click', async () => {
   const token = getToken();
   const name = guestNameInput.value.trim();
+  const checkoutDate = checkoutDateInput.value;
 
   if (!token) {
     statusEl.textContent = 'Please set your GitHub token first (below).';
@@ -83,7 +87,7 @@ updateBtn.addEventListener('click', async () => {
     const getData = await getRes.json();
     const sha = getData.sha;
 
-    const newContent = JSON.stringify({ guestName: name }, null, 2);
+    const newContent = JSON.stringify({ guestName: name, checkoutDate: checkoutDate }, null, 2);
     const encodedContent = btoa(newContent);
 
     const putRes = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`, {

@@ -5,14 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Blue Pearl Kiosk Control Panel</title>
 <link rel="icon" href="favicon-32.png" sizes="32x32">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">  
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
   body { font-family: -apple-system, sans-serif; max-width: 420px; margin: 60px auto; padding: 20px; }
   h1 { font-size: 20px; margin-bottom: 24px; }
   label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; }
   input { width: 100%; padding: 12px; font-size: 16px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-  button { width: 100%; padding: 14px; font-size: 16px; background: #0969da; color: white; border: none; border-radius: 6px; cursor: pointer; }
+  button { width: 100%; padding: 14px; font-size: 16px; background: #0969da; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 12px; }
   button:disabled { background: #ccc; }
+  #wakeBtn { background: #1a7f37; }
   #status { margin-top: 16px; font-size: 14px; }
   .success { color: #1a7f37; }
   .error { color: #cf222e; }
@@ -25,11 +26,14 @@
 <h1>Blue Pearl Kiosk — Guest Name</h1>
 
 <label for="checkoutDate">Checkout Date</label>
-<input type="date" id="checkoutDate">  
+<input type="date" id="checkoutDate">
+
 <label for="guestName">Guest Name</label>
 <input type="text" id="guestName" placeholder="e.g. Sarah">
 
 <button id="updateBtn">Update Guest Name</button>
+
+<button id="wakeBtn">Wake TV Now</button>
 
 <div id="status"></div>
 
@@ -48,6 +52,7 @@ const FILE_PATH = 'guest-config.json';
 const guestNameInput = document.getElementById('guestName');
 const checkoutDateInput = document.getElementById('checkoutDate');
 const updateBtn = document.getElementById('updateBtn');
+const wakeBtn = document.getElementById('wakeBtn');
 const statusEl = document.getElementById('status');
 const tokenInput = document.getElementById('tokenInput');
 const saveTokenBtn = document.getElementById('saveTokenBtn');
@@ -82,14 +87,18 @@ updateBtn.addEventListener('click', async () => {
   statusEl.className = '';
 
   try {
-    // Get current file to obtain its SHA (required by GitHub API to update a file)
     const getRes = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const getData = await getRes.json();
     const sha = getData.sha;
+    const currentContent = JSON.parse(atob(getData.content));
 
-    const newContent = JSON.stringify({ guestName: name, checkoutDate: checkoutDate }, null, 2);
+    const newContent = JSON.stringify({
+      guestName: name,
+      checkoutDate: checkoutDate,
+      wakeRequested: currentContent.wakeRequested || false
+    }, null, 2);
     const encodedContent = btoa(newContent);
 
     const putRes = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`, {
@@ -119,6 +128,61 @@ updateBtn.addEventListener('click', async () => {
   }
 
   updateBtn.disabled = false;
+});
+
+wakeBtn.addEventListener('click', async () => {
+  const token = getToken();
+  if (!token) {
+    statusEl.textContent = 'Please set your GitHub token first (below).';
+    statusEl.className = 'error';
+    return;
+  }
+
+  wakeBtn.disabled = true;
+  statusEl.textContent = 'Sending wake request...';
+  statusEl.className = '';
+
+  try {
+    const getRes = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const getData = await getRes.json();
+    const sha = getData.sha;
+    const currentContent = JSON.parse(atob(getData.content));
+
+    const newContent = JSON.stringify({
+      guestName: currentContent.guestName || '',
+      checkoutDate: currentContent.checkoutDate || '',
+      wakeRequested: true
+    }, null, 2);
+    const encodedContent = btoa(newContent);
+
+    const putRes = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: 'Wake TV requested',
+        content: encodedContent,
+        sha: sha
+      })
+    });
+
+    if (putRes.ok) {
+      statusEl.textContent = 'Wake request sent! TV should turn on within a couple minutes.';
+      statusEl.className = 'success';
+    } else {
+      statusEl.textContent = 'Error sending wake request.';
+      statusEl.className = 'error';
+    }
+  } catch (e) {
+    statusEl.textContent = 'Error: ' + e.message;
+    statusEl.className = 'error';
+  }
+
+  wakeBtn.disabled = false;
 });
 </script>
 

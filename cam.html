@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Blue Pearl Cam</title>
+<style>
+html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:sans-serif}
+video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover}
+#overlay{position:fixed;left:40px;bottom:40px;color:#fff;font-size:48px;text-shadow:0 2px 8px #000}
+#status{position:fixed;right:10px;top:10px;color:#0f0;font-size:14px;text-shadow:0 0 4px #000}
+</style>
+</head>
+<body>
+<video id="v" muted autoplay playsinline></video>
+<div id="overlay">Welcome to Blue Pearl</div>
+<div id="status">starting</div>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+<script>
+// ---- settings ----
+const CAM = "https://watch.hdrelay.io/live/cam_five_star___pompano_joe_s_1781797463071/index.m3u8";
+const FALLBACK = "https://bluepearlretreat.github.io/blue-pearl-kiosk/index.html";
+const START_TIMEOUT_MS = 60000;   // no video within 60s -> fallback
+const STALL_TIMEOUT_MS = 90000;   // video stops advancing for 90s -> fallback
+
+// ---- elements ----
+const v = document.getElementById("v");
+const s = document.getElementById("status");
+
+// ---- status log (kept in browser local storage, survives screen changes) ----
+function log(msg) {
+  const line = new Date().toLocaleTimeString() + " " + msg;
+  s.textContent = line;
+  try {
+    const prev = JSON.parse(localStorage.getItem("cam-log") || "[]");
+    prev.push(line);
+    localStorage.setItem("cam-log", JSON.stringify(prev.slice(-50)));
+  } catch (e) { /* storage may be unavailable; status text still shows */ }
+}
+
+// ---- fallback: send the screen to the original kiosk page ----
+let fellBack = false;
+function fallback(reason) {
+  if (fellBack) return;
+  fellBack = true;
+  log("fallback: " + reason);
+  location.replace(FALLBACK);
+}
+
+// ---- player ----
+const started = Date.now();
+let lastTime = -1;
+let lastProgress = Date.now();
+
+log("loading");
+
+if (Hls.isSupported()) {
+  const hls = new Hls({ liveSyncDurationCount: 3 });
+  hls.loadSource(CAM);
+  hls.attachMedia(v);
+  hls.on(Hls.Events.MANIFEST_PARSED, () => { log("manifest ok"); v.play(); });
+  hls.on(Hls.Events.ERROR, (e, d) => {
+    if (d.fatal) fallback("fatal " + d.type + " " + d.details);
+    else log("warn " + d.details);
+  });
+} else {
+  fallback("hls not supported");
+}
+
+// ---- watchdog + heartbeat (every 15s) ----
+setInterval(() => {
+  const now = Date.now();
+  if (v.currentTime !== lastTime) {
+    lastTime = v.currentTime;
+    lastProgress = now;
+  }
+  if (lastTime <= 0 && now - started > START_TIMEOUT_MS) {
+    fallback("no video after 60s");
+    return;
+  }
+  if (lastTime > 0 && now - lastProgress > STALL_TIMEOUT_MS) {
+    fallback("stalled 90s");
+    return;
+  }
+  // heartbeat every 5 minutes so the screen shows it is alive
+  if (Math.floor(now / 1000) % 300 < 15) {
+    log((v.paused ? "PAUSED" : "playing"));
+  }
+}, 15000);
+</script>
+</body>
+</html>

@@ -463,20 +463,24 @@
     oceanScene.classList.add('video-ready'); // fades the illustrated scene out
   });
 
-  function showIllustration(){
-    oceanScene.classList.remove('video-ready'); // back to the illustrated scene
+    function showIllustration(){
+    oceanScene.classList.remove('video-ready'); // show the illustrated scene
+    oceanVideo.pause();
   }
 
+  // Second choice: the original ocean video in the repo
   function startLocalLoop(){
-    // second choice: the video file already in the repo
     if (hls) { hls.destroy(); hls = null; }
+    oceanVideo.onerror = showIllustration; // if this file also fails, show the illustration
     oceanVideo.src = 'ocean-loop.mp4';
+    oceanVideo.loop = true;
     oceanVideo.play().catch(() => {});
   }
 
+  // First choice: the live camera
   function startCam(){
-    showIllustration();
     if (window.Hls && Hls.isSupported()) {
+      oceanVideo.onerror = null;
       hls = new Hls({ liveSyncDurationCount: 3 });
       hls.loadSource(CAM_URL);
       hls.attachMedia(oceanVideo);
@@ -484,19 +488,16 @@
       hls.on(Hls.Events.ERROR, (e, d) => {
         if (d.fatal) {
           hls.destroy(); hls = null;
-          showIllustration();   // stream failed: show the illustrated scene
-          setTimeout(startCam, 60000); // retry the stream in a minute
+          startLocalLoop();            // stream failed: play the original video
+          setTimeout(startCam, 60000); // try the camera again in a minute
         }
       });
-    } else if (oceanVideo.canPlayType('application/vnd.apple.mpegurl')) {
-      oceanVideo.src = CAM_URL;
-      oceanVideo.play().catch(() => {});
     } else {
       startLocalLoop();
     }
   }
 
-  // watchdog: if the picture stops moving, show the illustration and retry
+  // watchdog: if the picture freezes for 90 seconds, switch to the original video and retry the camera
   setInterval(() => {
     if (oceanVideo.currentTime !== lastTime) {
       lastTime = oceanVideo.currentTime;
@@ -505,9 +506,8 @@
     }
     if (Date.now() - lastProgress > 90000) {
       lastProgress = Date.now();
-      showIllustration();
-      if (hls) { hls.destroy(); hls = null; }
-      startCam();
+      startLocalLoop();
+      setTimeout(startCam, 60000);
     }
   }, 15000);
 

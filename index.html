@@ -454,8 +454,43 @@
     /* ---------------- Real video background ---------------- */
   const oceanScene = document.getElementById('oceanScene');
   const oceanVideo = document.getElementById('oceanVideo');
-  const CAM_URL = "https://watch.hdrelay.io/live/cam_five_star___pompano_joe_s_1781797463071/index.m3u8";
+  // The camera's stream server can change (it moved from watch. to east2. in Nov 2026),
+  // so find the current address each time we connect:
+  //  1. ask HDRelay's public player API (browsers currently reject it because HDRelay sends
+  //     a doubled CORS header, but it starts working on its own if they fix that), then
+  //  2. try the camera on each known HDRelay server and use the first one that is live.
+  const CAM_ID = "cam_five_star___pompano_joe_s_1781797463071";
+  const CAM_PROFILE = "p_mqjq0ruimd7h"; // the camera's "Public embed" profile
+  const CAM_LOOKUP = "https://watch.hdrelay.io/api/player-profile/" + CAM_ID + "/" + CAM_PROFILE;
+  const CAM_SERVERS = ["east2", "watch", "east", "east1", "east3", "west", "west1", "west2", "central", "central1"];
+  const camUrlOn = host => "https://" + host + ".hdrelay.io/live/" + CAM_ID + "/index.m3u8";
+  let camUrl = camUrlOn("east2"); // last known good
   let hls = null;
+
+  function withTimeout(promise, ms){
+    return Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), ms))]);
+  }
+
+  function isLive(url){
+    return withTimeout(fetch(url + "?t=" + Date.now(), { cache: "no-store" }).then(r => r.ok ? r.text() : ""), 8000)
+      .then(t => t.startsWith("#EXTM3U"))
+      .catch(() => false);
+  }
+
+  async function findCamUrl(){
+    try {
+      const d = await withTimeout(fetch(CAM_LOOKUP + "?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()), 8000);
+      const u = d && d.streamUrl;
+      if (typeof u === "string" && /^https:\/\/[a-z0-9-]+\.hdrelay\.io\/live\/[^?#]+\.m3u8$/.test(u) && await isLive(u)) {
+        return (camUrl = u);
+      }
+    } catch (e) { /* API not readable from the browser; fall through to probing */ }
+    const candidates = [camUrl, ...CAM_SERVERS.map(camUrlOn).filter(u => u !== camUrl)];
+    for (const u of candidates) {
+      if (await isLive(u)) return (camUrl = u);
+    }
+    return camUrl; // nothing live right now: try the last good address (fails over to the ocean loop)
+  }
   let lastTime = -1;
   let lastProgress = Date.now();
 
@@ -480,21 +515,26 @@
   // First choice: the live camera
   function startCam(){
     if (window.Hls && Hls.isSupported()) {
-      oceanVideo.onerror = null;
-      hls = new Hls({ liveSyncDurationCount: 3 });
-      hls.loadSource(CAM_URL);
-      hls.attachMedia(oceanVideo);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => oceanVideo.play().catch(() => {}));
-      hls.on(Hls.Events.ERROR, (e, d) => {
-        if (d.fatal) {
-          hls.destroy(); hls = null;
-          startLocalLoop();            // stream failed: play the original video
-          setTimeout(startCam, 60000); // try the camera again in a minute
-        }
-      });
+      findCamUrl().then(playCam);
     } else {
       startLocalLoop();
     }
+  }
+
+  function playCam(url){
+    if (hls) { hls.destroy(); hls = null; }
+    oceanVideo.onerror = null;
+    hls = new Hls({ liveSyncDurationCount: 3 });
+    hls.loadSource(url);
+    hls.attachMedia(oceanVideo);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => oceanVideo.play().catch(() => {}));
+    hls.on(Hls.Events.ERROR, (e, d) => {
+      if (d.fatal) {
+        hls.destroy(); hls = null;
+        startLocalLoop();            // stream failed: play the original video
+        setTimeout(startCam, 60000); // look up the address and try the camera again in a minute
+      }
+    });
   }
 
   // watchdog: if the picture freezes for 90 seconds, switch to the original video and retry the camera
